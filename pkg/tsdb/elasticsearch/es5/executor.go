@@ -7,6 +7,8 @@ import (
 	"github.com/grafana/grafana/pkg/tsdb"
 	esmodel "github.com/grafana/grafana/pkg/tsdb/elasticsearch/models"
 	elastic "gopkg.in/olivere/elastic.v5"
+  "net/http"
+  "crypto/tls"
 )
 
 func Execute(e *esmodel.ESDataSource, ctx context.Context, queries tsdb.QuerySlice, query *tsdb.QueryContext) *tsdb.BatchResult {
@@ -21,7 +23,14 @@ func Execute(e *esmodel.ESDataSource, ctx context.Context, queries tsdb.QuerySli
 	for _, q := range queries {
 		url := elastic.SetURL(q.DataSource.Url)
 		basicAuth := elastic.SetBasicAuth(q.DataSource.BasicAuthUser, q.DataSource.BasicAuthPassword)
-		cli, err := elastic.NewSimpleClient(url, basicAuth)
+
+    httpClient := elastic.SetHttpClient(&http.Client{
+      Transport: &http.Transport{
+        TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // ignore expired SSL certificates
+      },
+    })
+
+		cli, err := elastic.NewSimpleClient(url, basicAuth, httpClient)
 		if err != nil {
 			result.WithError(err)
 			return result
