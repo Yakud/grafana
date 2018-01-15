@@ -50,11 +50,12 @@ var (
 	BuildStamp   int64
 
 	// Paths
-	LogsPath       string
-	HomePath       string
-	DataPath       string
-	PluginsPath    string
-	CustomInitPath = "conf/custom.ini"
+	LogsPath         string
+	HomePath         string
+	DataPath         string
+	PluginsPath      string
+	ProvisioningPath string
+	CustomInitPath   = "conf/custom.ini"
 
 	// Log settings.
 	LogModes   []string
@@ -89,6 +90,9 @@ var (
 	SnapShotTTLDays       int
 	SnapShotRemoveExpired bool
 
+	// Dashboard history
+	DashboardVersionsToKeep int
+
 	// User settings
 	AllowUserSignUp         bool
 	AllowUserOrgCreate      bool
@@ -102,6 +106,7 @@ var (
 	ExternalUserMngLinkUrl  string
 	ExternalUserMngLinkName string
 	ExternalUserMngInfo     string
+	ViewersCanEdit          bool
 
 	// Http auth
 	AdminUser     string
@@ -470,7 +475,7 @@ func NewConfigContext(args *CommandLineArgs) error {
 	Env = Cfg.Section("").Key("app_mode").MustString("development")
 	InstanceName = Cfg.Section("").Key("instance_name").MustString("unknown_instance_name")
 	PluginsPath = makeAbsolute(Cfg.Section("paths").Key("plugins").String(), HomePath)
-
+	ProvisioningPath = makeAbsolute(Cfg.Section("paths").Key("provisioning").String(), HomePath)
 	server := Cfg.Section("server")
 	AppUrl, AppSubUrl = parseAppUrlAndSubUrl(server)
 
@@ -518,6 +523,10 @@ func NewConfigContext(args *CommandLineArgs) error {
 	SnapShotRemoveExpired = snapshots.Key("snapshot_remove_expired").MustBool(true)
 	SnapShotTTLDays = snapshots.Key("snapshot_TTL_days").MustInt(90)
 
+	// read dashboard settings
+	dashboards := Cfg.Section("dashboards")
+	DashboardVersionsToKeep = dashboards.Key("versions_to_keep").MustInt(20)
+
 	//  read data source proxy white list
 	DataProxyWhiteList = make(map[string]bool)
 	for _, hostAndIp := range util.SplitString(security.Key("data_source_proxy_whitelist").String()) {
@@ -532,13 +541,14 @@ func NewConfigContext(args *CommandLineArgs) error {
 	AllowUserSignUp = users.Key("allow_sign_up").MustBool(true)
 	AllowUserOrgCreate = users.Key("allow_org_create").MustBool(true)
 	AutoAssignOrg = users.Key("auto_assign_org").MustBool(true)
-	AutoAssignOrgRole = users.Key("auto_assign_org_role").In("Editor", []string{"Editor", "Admin", "Read Only Editor", "Viewer"})
+	AutoAssignOrgRole = users.Key("auto_assign_org_role").In("Editor", []string{"Editor", "Admin", "Viewer"})
 	VerifyEmailEnabled = users.Key("verify_email_enabled").MustBool(false)
 	LoginHint = users.Key("login_hint").String()
 	DefaultTheme = users.Key("default_theme").String()
 	ExternalUserMngLinkUrl = users.Key("external_manage_link_url").String()
 	ExternalUserMngLinkName = users.Key("external_manage_link_name").String()
 	ExternalUserMngInfo = users.Key("external_manage_info").String()
+	ViewersCanEdit = users.Key("viewers_can_edit").MustBool(false)
 
 	// auth
 	auth := Cfg.Section("auth")
@@ -590,7 +600,7 @@ func NewConfigContext(args *CommandLineArgs) error {
 	readQuotaSettings()
 
 	if VerifyEmailEnabled && !Smtp.Enabled {
-		log.Warn("require_email_validation is enabled but smpt is disabled")
+		log.Warn("require_email_validation is enabled but smtp is disabled")
 	}
 
 	// check old key  name
@@ -600,7 +610,7 @@ func NewConfigContext(args *CommandLineArgs) error {
 	}
 
 	imageUploadingSection := Cfg.Section("external_image_storage")
-	ImageUploadProvider = imageUploadingSection.Key("provider").MustString("internal")
+	ImageUploadProvider = imageUploadingSection.Key("provider").MustString("")
 	return nil
 }
 
@@ -661,5 +671,6 @@ func LogConfigurationInfo() {
 	logger.Info("Path Data", "path", DataPath)
 	logger.Info("Path Logs", "path", LogsPath)
 	logger.Info("Path Plugins", "path", PluginsPath)
+	logger.Info("Path Provisioning", "path", ProvisioningPath)
 	logger.Info("App mode " + Env)
 }

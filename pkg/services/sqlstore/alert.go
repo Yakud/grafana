@@ -88,13 +88,18 @@ func HandleAlertsQuery(query *m.GetAlertsQuery) error {
 		params = append(params, query.PanelId)
 	}
 
-	if len(query.State) > 0 && query.State[0] != "ALL" {
+	if len(query.State) > 0 && query.State[0] != "all" {
 		sql.WriteString(` AND (`)
 		for i, v := range query.State {
 			if i > 0 {
 				sql.WriteString(" OR ")
 			}
-			sql.WriteString("state = ? ")
+			if strings.HasPrefix(v, "not_") {
+				sql.WriteString("state <> ? ")
+				v = strings.TrimPrefix(v, "not_")
+			} else {
+				sql.WriteString("state = ? ")
+			}
 			params = append(params, v)
 		}
 		sql.WriteString(")")

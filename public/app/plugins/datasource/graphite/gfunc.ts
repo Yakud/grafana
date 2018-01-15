@@ -1,4 +1,6 @@
 import _ from 'lodash';
+import $ from 'jquery';
+import { isVersionGtOrEq } from 'app/core/utils/version';
 
 var index = [];
 var categories = {
@@ -232,10 +234,29 @@ addFuncDef({
   name: 'aliasByNode',
   category: categories.Special,
   params: [
-    { name: 'node', type: 'int', options: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12] },
-    { name: 'node', type: 'int', options: [0, -1, -2, -3, -4, -5, -6, -7], optional: true },
-    { name: 'node', type: 'int', options: [0, -1, -2, -3, -4, -5, -6, -7], optional: true },
-    { name: 'node', type: 'int', options: [0, -1, -2, -3, -4, -5, -6, -7], optional: true },
+    {
+      name: 'node',
+      type: 'int',
+      options: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12],
+    },
+    {
+      name: 'node',
+      type: 'int',
+      options: [0, -1, -2, -3, -4, -5, -6, -7],
+      optional: true,
+    },
+    {
+      name: 'node',
+      type: 'int',
+      options: [0, -1, -2, -3, -4, -5, -6, -7],
+      optional: true,
+    },
+    {
+      name: 'node',
+      type: 'int',
+      options: [0, -1, -2, -3, -4, -5, -6, -7],
+      optional: true,
+    },
   ],
   defaultParams: [3],
 });
@@ -244,8 +265,16 @@ addFuncDef({
   name: 'substr',
   category: categories.Special,
   params: [
-    { name: 'start', type: 'int', options: [-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12] },
-    { name: 'stop', type: 'int', options: [-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12] },
+    {
+      name: 'start',
+      type: 'int',
+      options: [-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12],
+    },
+    {
+      name: 'stop',
+      type: 'int',
+      options: [-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12],
+    },
   ],
   defaultParams: [0, 0],
 });
@@ -253,7 +282,14 @@ addFuncDef({
 addFuncDef({
   name: 'sortByName',
   category: categories.Special,
-  params: [{ name: 'natural', type: 'boolean', options: ['true', 'false'], optional: true }],
+  params: [
+    {
+      name: 'natural',
+      type: 'boolean',
+      options: ['true', 'false'],
+      optional: true,
+    },
+  ],
   defaultParams: ['false'],
 });
 
@@ -357,7 +393,13 @@ addFuncDef({
 addFuncDef({
   name: 'timeShift',
   category: categories.Transform,
-  params: [{ name: 'amount', type: 'select', options: ['1h', '6h', '12h', '1d', '2d', '7d', '14d', '30d'] }],
+  params: [
+    {
+      name: 'amount',
+      type: 'select',
+      options: ['1h', '6h', '12h', '1d', '2d', '7d', '14d', '30d'],
+    },
+  ],
   defaultParams: ['1d'],
 });
 
@@ -365,7 +407,11 @@ addFuncDef({
   name: 'timeStack',
   category: categories.Transform,
   params: [
-    { name: 'timeShiftUnit', type: 'select', options: ['1h', '6h', '12h', '1d', '2d', '7d', '14d', '30d'] },
+    {
+      name: 'timeShiftUnit',
+      type: 'select',
+      options: ['1h', '6h', '12h', '1d', '2d', '7d', '14d', '30d'],
+    },
     { name: 'timeShiftStart', type: 'int' },
     { name: 'timeShiftEnd', type: 'int' },
   ],
@@ -377,8 +423,17 @@ addFuncDef({
   category: categories.Transform,
   params: [
     { name: 'interval', type: 'string' },
-    { name: 'func', type: 'select', options: ['sum', 'avg', 'min', 'max', 'last'] },
-    { name: 'alignToFrom', type: 'boolean', optional: true, options: ['false', 'true'] },
+    {
+      name: 'func',
+      type: 'select',
+      options: ['sum', 'avg', 'min', 'max', 'last'],
+    },
+    {
+      name: 'alignToFrom',
+      type: 'boolean',
+      optional: true,
+      options: ['false', 'true'],
+    },
   ],
   defaultParams: ['1h', 'sum', 'false'],
 });
@@ -388,7 +443,11 @@ addFuncDef({
   category: categories.Transform,
   params: [
     { name: 'interval', type: 'string' },
-    { name: 'func', type: 'select', options: ['sum', 'avg', 'min', 'max', 'last'] },
+    {
+      name: 'func',
+      type: 'select',
+      options: ['sum', 'avg', 'min', 'max', 'last'],
+    },
   ],
   defaultParams: ['1h', 'sum'],
 });
@@ -514,7 +573,11 @@ addFuncDef({
   name: 'movingAverage',
   category: categories.Filter,
   params: [
-    { name: 'windowSize', type: 'int_or_interval', options: ['5', '7', '10', '5min', '10min', '30min', '1hour'] },
+    {
+      name: 'windowSize',
+      type: 'int_or_interval',
+      options: ['5', '7', '10', '5min', '10min', '30min', '1hour'],
+    },
   ],
   defaultParams: [10],
 });
@@ -523,7 +586,11 @@ addFuncDef({
   name: 'movingMedian',
   category: categories.Filter,
   params: [
-    { name: 'windowSize', type: 'int_or_interval', options: ['5', '7', '10', '5min', '10min', '30min', '1hour'] },
+    {
+      name: 'windowSize',
+      type: 'int_or_interval',
+      options: ['5', '7', '10', '5min', '10min', '30min', '1hour'],
+    },
   ],
   defaultParams: ['5'],
 });
@@ -591,7 +658,13 @@ addFuncDef({
 addFuncDef({
   name: 'aggregateLine',
   category: categories.Combine,
-  params: [{ name: 'func', type: 'select', options: ['sum', 'avg', 'min', 'max', 'last'] }],
+  params: [
+    {
+      name: 'func',
+      type: 'select',
+      options: ['sum', 'avg', 'min', 'max', 'last'],
+    },
+  ],
   defaultParams: ['avg'],
   version: '1.0',
 });
@@ -616,7 +689,11 @@ addFuncDef({
   name: 'exponentialMovingAverage',
   category: categories.Calculate,
   params: [
-    { name: 'windowSize', type: 'int_or_interval', options: ['5', '7', '10', '5min', '10min', '30min', '1hour'] },
+    {
+      name: 'windowSize',
+      type: 'int_or_interval',
+      options: ['5', '7', '10', '5min', '10min', '30min', '1hour'],
+    },
   ],
   defaultParams: [10],
   version: '1.0',
@@ -647,10 +724,29 @@ addFuncDef({
       type: 'string',
       options: ['sum', 'avg', 'maxSeries'],
     },
-    { name: 'node', type: 'int', options: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12] },
-    { name: 'node', type: 'int', options: [0, -1, -2, -3, -4, -5, -6, -7], optional: true },
-    { name: 'node', type: 'int', options: [0, -1, -2, -3, -4, -5, -6, -7], optional: true },
-    { name: 'node', type: 'int', options: [0, -1, -2, -3, -4, -5, -6, -7], optional: true },
+    {
+      name: 'node',
+      type: 'int',
+      options: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12],
+    },
+    {
+      name: 'node',
+      type: 'int',
+      options: [0, -1, -2, -3, -4, -5, -6, -7],
+      optional: true,
+    },
+    {
+      name: 'node',
+      type: 'int',
+      options: [0, -1, -2, -3, -4, -5, -6, -7],
+      optional: true,
+    },
+    {
+      name: 'node',
+      type: 'int',
+      options: [0, -1, -2, -3, -4, -5, -6, -7],
+      optional: true,
+    },
   ],
   defaultParams: ['sum', 3],
   version: '1.0',
@@ -659,7 +755,13 @@ addFuncDef({
 addFuncDef({
   name: 'integralByInterval',
   category: categories.Transform,
-  params: [{ name: 'intervalUnit', type: 'select', options: ['1h', '6h', '12h', '1d', '2d', '7d', '14d', '30d'] }],
+  params: [
+    {
+      name: 'intervalUnit',
+      type: 'select',
+      options: ['1h', '6h', '12h', '1d', '2d', '7d', '14d', '30d'],
+    },
+  ],
   defaultParams: ['1d'],
   version: '1.0',
 });
@@ -718,7 +820,11 @@ addFuncDef({
   name: 'movingMin',
   category: categories.Calculate,
   params: [
-    { name: 'windowSize', type: 'int_or_interval', options: ['5', '7', '10', '5min', '10min', '30min', '1hour'] },
+    {
+      name: 'windowSize',
+      type: 'int_or_interval',
+      options: ['5', '7', '10', '5min', '10min', '30min', '1hour'],
+    },
   ],
   defaultParams: [10],
   version: '1.0',
@@ -728,7 +834,11 @@ addFuncDef({
   name: 'movingMax',
   category: categories.Calculate,
   params: [
-    { name: 'windowSize', type: 'int_or_interval', options: ['5', '7', '10', '5min', '10min', '30min', '1hour'] },
+    {
+      name: 'windowSize',
+      type: 'int_or_interval',
+      options: ['5', '7', '10', '5min', '10min', '30min', '1hour'],
+    },
   ],
   defaultParams: [10],
   version: '1.0',
@@ -738,7 +848,11 @@ addFuncDef({
   name: 'movingSum',
   category: categories.Calculate,
   params: [
-    { name: 'windowSize', type: 'int_or_interval', options: ['5', '7', '10', '5min', '10min', '30min', '1hour'] },
+    {
+      name: 'windowSize',
+      type: 'int_or_interval',
+      options: ['5', '7', '10', '5min', '10min', '30min', '1hour'],
+    },
   ],
   defaultParams: [10],
   version: '1.0',
@@ -748,10 +862,29 @@ addFuncDef({
   name: 'multiplySeriesWithWildcards',
   category: categories.Calculate,
   params: [
-    { name: 'position', type: 'int', options: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12] },
-    { name: 'position', type: 'int', options: [0, -1, -2, -3, -4, -5, -6, -7], optional: true },
-    { name: 'position', type: 'int', options: [0, -1, -2, -3, -4, -5, -6, -7], optional: true },
-    { name: 'position', type: 'int', options: [0, -1, -2, -3, -4, -5, -6, -7], optional: true },
+    {
+      name: 'position',
+      type: 'int',
+      options: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12],
+    },
+    {
+      name: 'position',
+      type: 'int',
+      options: [0, -1, -2, -3, -4, -5, -6, -7],
+      optional: true,
+    },
+    {
+      name: 'position',
+      type: 'int',
+      options: [0, -1, -2, -3, -4, -5, -6, -7],
+      optional: true,
+    },
+    {
+      name: 'position',
+      type: 'int',
+      options: [0, -1, -2, -3, -4, -5, -6, -7],
+      optional: true,
+    },
   ],
   defaultParams: [2],
   version: '1.0',
@@ -783,8 +916,16 @@ addFuncDef({
   name: 'reduceSeries',
   shortName: 'reduce',
   params: [
-    { name: 'function', type: 'string', options: ['asPercent', 'diffSeries', 'divideSeries'] },
-    { name: 'reduceNode', type: 'int', options: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13] },
+    {
+      name: 'function',
+      type: 'string',
+      options: ['asPercent', 'diffSeries', 'divideSeries'],
+    },
+    {
+      name: 'reduceNode',
+      type: 'int',
+      options: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+    },
     { name: 'reduceMatchers', type: 'string' },
     { name: 'reduceMatchers', type: 'string' },
   ],
@@ -817,7 +958,11 @@ addFuncDef({
   name: 'timeSlice',
   category: categories.Transform,
   params: [
-    { name: 'startSliceAt', type: 'select', options: ['-1h', '-6h', '-12h', '-1d', '-2d', '-7d', '-14d', '-30d'] },
+    {
+      name: 'startSliceAt',
+      type: 'select',
+      options: ['-1h', '-6h', '-12h', '-1d', '-2d', '-7d', '-14d', '-30d'],
+    },
     {
       name: 'endSliceAt',
       type: 'select',
@@ -834,7 +979,11 @@ addFuncDef({
   category: categories.Filter,
   params: [
     { name: 'other', type: 'value_or_series', optional: true },
-    { name: 'node', type: 'int', options: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12] },
+    {
+      name: 'node',
+      type: 'int',
+      options: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12],
+    },
   ],
   defaultParams: ['#A', 4],
   version: '1.0',
@@ -887,94 +1036,91 @@ _.each(categories, function(funcList, catName) {
   categories[catName] = _.sortBy(funcList, 'name');
 });
 
-function FuncInstance(funcDef, options?) {
-  this.def = funcDef;
-  this.params = [];
-
-  if (options && options.withDefaultParams) {
-    this.params = funcDef.defaultParams.slice(0);
-  }
-
-  this.updateText();
-}
-
-function isNumeric(obj) {
-  return !isNaN(parseFloat(obj)) && isFinite(obj);
-}
-
-FuncInstance.prototype.render = function(metricExp) {
-  var str = this.def.name + '(';
-  var parameters = _.map(
-    this.params,
-    function(value, index) {
-      var paramType = this.def.params[index].type;
-      if (paramType === 'int' || paramType === 'value_or_series' || paramType === 'boolean') {
-        return value;
-      } else if (paramType === 'int_or_interval' && isNumeric(value)) {
-        return value;
-      }
-
-      return "'" + value + "'";
-    }.bind(this),
-  );
-
-  if (metricExp) {
-    parameters.unshift(metricExp);
-  }
-
-  return str + parameters.join(', ') + ')';
-};
-
-FuncInstance.prototype._hasMultipleParamsInString = function(strValue, index) {
-  if (strValue.indexOf(',') === -1) {
-    return false;
-  }
-
-  return this.def.params[index + 1] && this.def.params[index + 1].optional;
-};
-
-FuncInstance.prototype.updateParam = function(strValue, index) {
-  // handle optional parameters
-  // if string contains ',' and next param is optional, split and update both
-  if (this._hasMultipleParamsInString(strValue, index)) {
-    _.each(
-      strValue.split(','),
-      function(partVal, idx) {
-        this.updateParam(partVal.trim(), index + idx);
-      }.bind(this),
-    );
-    return;
-  }
-
-  if (strValue === '' && this.def.params[index].optional) {
-    this.params.splice(index, 1);
-  } else {
-    this.params[index] = strValue;
-  }
-
-  this.updateText();
-};
-
-FuncInstance.prototype.updateText = function() {
-  if (this.params.length === 0) {
-    this.text = this.def.name + '()';
-    return;
-  }
-
-  var text = this.def.name + '(';
-  text += this.params.join(', ');
-  text += ')';
-  this.text = text;
-};
-
 function isVersionRelatedFunction(func, graphiteVersion) {
-  return isVersionGreaterOrEqual(graphiteVersion, func.version) || !func.version;
+  return isVersionGtOrEq(graphiteVersion, func.version) || !func.version;
 }
 
-function isVersionGreaterOrEqual(a, b) {
-  var a_num = Number(a);
-  var b_num = Number(b);
-  return a_num >= b_num;
+export class FuncInstance {
+  def: any;
+  params: any;
+  text: any;
+  added: boolean;
+
+  constructor(funcDef, options) {
+    this.def = funcDef;
+    this.params = [];
+
+    if (options && options.withDefaultParams) {
+      this.params = funcDef.defaultParams.slice(0);
+    }
+
+    this.updateText();
+  }
+
+  render(metricExp) {
+    var str = this.def.name + '(';
+    var parameters = _.map(
+      this.params,
+      function(value, index) {
+        var paramType = this.def.params[index].type;
+        if (paramType === 'int' || paramType === 'value_or_series' || paramType === 'boolean') {
+          return value;
+        } else if (paramType === 'int_or_interval' && $.isNumeric(value)) {
+          return value;
+        }
+
+        return "'" + value + "'";
+      }.bind(this)
+    );
+
+    if (metricExp) {
+      parameters.unshift(metricExp);
+    }
+
+    return str + parameters.join(', ') + ')';
+  }
+
+  _hasMultipleParamsInString(strValue, index) {
+    if (strValue.indexOf(',') === -1) {
+      return false;
+    }
+
+    return this.def.params[index + 1] && this.def.params[index + 1].optional;
+  }
+
+  updateParam(strValue, index) {
+    // handle optional parameters
+    // if string contains ',' and next param is optional, split and update both
+    if (this._hasMultipleParamsInString(strValue, index)) {
+      _.each(
+        strValue.split(','),
+        function(partVal, idx) {
+          this.updateParam(partVal.trim(), index + idx);
+        }.bind(this)
+      );
+      return;
+    }
+
+    if (strValue === '' && this.def.params[index].optional) {
+      this.params.splice(index, 1);
+    } else {
+      this.params[index] = strValue;
+    }
+
+    this.updateText();
+  }
+
+  updateText() {
+    if (this.params.length === 0) {
+      this.text = this.def.name + '()';
+      return;
+    }
+
+    var text = this.def.name + '(';
+    text += this.params.join(', ');
+    text += ')';
+    this.text = text;
+  }
 }
 
 export default {
