@@ -2,20 +2,28 @@ package models
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
 	"github.com/gosimple/slug"
 	"github.com/grafana/grafana/pkg/components/simplejson"
+	"github.com/grafana/grafana/pkg/setting"
 )
 
 // Typed errors
 var (
-	ErrDashboardNotFound           = errors.New("Dashboard not found")
-	ErrDashboardSnapshotNotFound   = errors.New("Dashboard snapshot not found")
-	ErrDashboardWithSameNameExists = errors.New("A dashboard with the same name already exists")
-	ErrDashboardVersionMismatch    = errors.New("The dashboard has been changed by someone else")
-	ErrDashboardTitleEmpty         = errors.New("Dashboard title cannot be empty")
+	ErrDashboardNotFound                   = errors.New("Dashboard not found")
+	ErrDashboardSnapshotNotFound           = errors.New("Dashboard snapshot not found")
+	ErrDashboardWithSameUIDExists          = errors.New("A dashboard with the same uid already exists")
+	ErrDashboardWithSameNameInFolderExists = errors.New("A dashboard with the same name in the folder already exists")
+	ErrDashboardVersionMismatch            = errors.New("The dashboard has been changed by someone else")
+	ErrDashboardTitleEmpty                 = errors.New("Dashboard title cannot be empty")
+	ErrDashboardFolderCannotHaveParent     = errors.New("A Dashboard Folder cannot be added to another folder")
+	ErrDashboardContainsInvalidAlertData   = errors.New("Invalid alert data. Cannot save dashboard")
+	ErrDashboardFailedToUpdateAlertData    = errors.New("Failed to save alert data")
+	ErrDashboardsWithSameSlugExists        = errors.New("Multiple dashboards with the same slug exists")
+	ErrDashboardFailedGenerateUniqueUid    = errors.New("Failed to generate unique dashboard id")
 )
 
 type UpdatePluginDashboardError struct {
@@ -36,6 +44,7 @@ var (
 // Dashboard model
 type Dashboard struct {
 	Id       int64
+	Uid      string
 	Slug     string
 	OrgId    int64
 	GnetId   int64
@@ -47,6 +56,9 @@ type Dashboard struct {
 
 	UpdatedBy int64
 	CreatedBy int64
+	FolderId  int64
+	IsFolder  bool
+	HasAcl    bool
 
 	Title string
 	Data  *simplejson.Json
@@ -62,6 +74,15 @@ func NewDashboard(title string) *Dashboard {
 	dash.Updated = time.Now()
 	dash.UpdateSlug()
 	return dash
+}
+
+// NewDashboardFolder creates a new dashboard folder
+func NewDashboardFolder(title string) *Dashboard {
+	folder := NewDashboard(title)
+	folder.Data.Set("schemaVersion", 16)
+	folder.Data.Set("editable", true)
+	folder.Data.Set("hideControls", true)
+	return folder
 }
 
 // GetTags turns the tags in data json into go string array
@@ -92,6 +113,10 @@ func NewDashboardFromJson(data *simplejson.Json) *Dashboard {
 		dash.GnetId = int64(gnetId)
 	}
 
+	if uid, err := dash.Data.Get("uid").String(); err == nil {
+		dash.Uid = uid
+	}
+
 	return dash
 }
 
@@ -111,6 +136,8 @@ func (cmd *SaveDashboardCommand) GetDashboardModel() *Dashboard {
 	dash.UpdatedBy = userId
 	dash.OrgId = cmd.OrgId
 	dash.PluginId = cmd.PluginId
+	dash.IsFolder = cmd.IsFolder
+	dash.FolderId = cmd.FolderId
 	dash.UpdateSlug()
 	return dash
 }
@@ -122,8 +149,46 @@ func (dash *Dashboard) GetString(prop string, defaultValue string) string {
 
 // UpdateSlug updates the slug
 func (dash *Dashboard) UpdateSlug() {
-	title := strings.ToLower(dash.Data.Get("title").MustString())
-	dash.Slug = slug.Make(title)
+	title := dash.Data.Get("title").MustString()
+	dash.Slug = SlugifyTitle(title)
+}
+
+func SlugifyTitle(title string) string {
+	return slug.Make(strings.ToLower(title))
+}
+
+// GetUrl return the html url for a folder if it's folder, otherwise for a dashboard
+func (dash *Dashboard) GetUrl() string {
+	return GetDashboardFolderUrl(dash.IsFolder, dash.Uid, dash.Slug)
+}
+
+// Return the html url for a dashboard
+func (dash *Dashboard) GenerateUrl() string {
+	return GetDashboardUrl(dash.Uid, dash.Slug)
+}
+
+// GetDashboardFolderUrl return the html url for a folder if it's folder, otherwise for a dashboard
+func GetDashboardFolderUrl(isFolder bool, uid string, slug string) string {
+	if isFolder {
+		return GetFolderUrl(uid, slug)
+	}
+
+	return GetDashboardUrl(uid, slug)
+}
+
+// Return the html url for a dashboard
+func GetDashboardUrl(uid string, slug string) string {
+	return fmt.Sprintf("%s/d/%s/%s", setting.AppSubUrl, uid, slug)
+}
+
+// Return the full url for a dashboard
+func GetFullDashboardUrl(uid string, slug string) string {
+	return fmt.Sprintf("%s%s", setting.AppUrl, GetDashboardUrl(uid, slug))
+}
+
+// GetFolderUrl return the html url for a folder
+func GetFolderUrl(folderUid string, slug string) string {
+	return fmt.Sprintf("%s/dashboards/f/%s/%s", setting.AppSubUrl, folderUid, slug)
 }
 
 //
@@ -138,12 +203,16 @@ type SaveDashboardCommand struct {
 	OrgId        int64            `json:"-"`
 	RestoredFrom int              `json:"-"`
 	PluginId     string           `json:"-"`
+	FolderId     int64            `json:"folderId"`
+	IsFolder     bool             `json:"isFolder"`
+
+	UpdatedAt time.Time
 
 	Result *Dashboard
 }
 
 type DeleteDashboardCommand struct {
-	Slug  string
+	Id    int64
 	OrgId int64
 }
 
@@ -152,8 +221,9 @@ type DeleteDashboardCommand struct {
 //
 
 type GetDashboardQuery struct {
-	Slug  string // required if no Id is specified
+	Slug  string // required if no Id or Uid is specified
 	Id    int64  // optional if slug is set
+	Uid   string // optional if slug is set
 	OrgId int64
 
 	Result *Dashboard
@@ -174,6 +244,14 @@ type GetDashboardsQuery struct {
 	Result       []*Dashboard
 }
 
+type GetDashboardPermissionsForUserQuery struct {
+	DashboardIds []int64
+	OrgId        int64
+	UserId       int64
+	OrgRole      RoleType
+	Result       []*DashboardPermissionForUser
+}
+
 type GetDashboardsByPluginIdQuery struct {
 	OrgId    int64
 	PluginId string
@@ -183,4 +261,39 @@ type GetDashboardsByPluginIdQuery struct {
 type GetDashboardSlugByIdQuery struct {
 	Id     int64
 	Result string
+}
+
+type GetDashboardsBySlugQuery struct {
+	OrgId int64
+	Slug  string
+
+	Result []*Dashboard
+}
+
+type GetFoldersForSignedInUserQuery struct {
+	OrgId        int64
+	SignedInUser *SignedInUser
+	Title        string
+	Result       []*DashboardFolder
+}
+
+type DashboardFolder struct {
+	Id    int64  `json:"id"`
+	Title string `json:"title"`
+}
+
+type DashboardPermissionForUser struct {
+	DashboardId    int64          `json:"dashboardId"`
+	Permission     PermissionType `json:"permission"`
+	PermissionName string         `json:"permissionName"`
+}
+
+type DashboardRef struct {
+	Uid  string
+	Slug string
+}
+
+type GetDashboardRefByIdQuery struct {
+	Id     int64
+	Result *DashboardRef
 }

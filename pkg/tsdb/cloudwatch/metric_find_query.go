@@ -3,6 +3,7 @@ package cloudwatch
 import (
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
 	"sort"
 	"strings"
@@ -37,6 +38,7 @@ var customMetricsDimensionsMap map[string]map[string]map[string]*CustomMetricsCa
 
 func init() {
 	metricsMap = map[string][]string{
+		"AWS/AmazonMQ":       {"CpuUtilization", "HeapUsage", "NetworkIn", "NetworkOut", "TotalMessageCount", "ConsumerCount", "EnqueueCount", "EnqueueTime", "ExpiredCount", "InflightCount", "DispatchCount", "DequeueCount", "MemoryUsage", "ProducerCount", "QueueSize"},
 		"AWS/ApiGateway":     {"4XXError", "5XXError", "CacheHitCount", "CacheMissCount", "Count", "IntegrationLatency", "Latency"},
 		"AWS/ApplicationELB": {"ActiveConnectionCount", "ClientTLSNegotiationErrorCount", "HealthyHostCount", "HTTPCode_ELB_4XX_Count", "HTTPCode_ELB_5XX_Count", "HTTPCode_Target_2XX_Count", "HTTPCode_Target_3XX_Count", "HTTPCode_Target_4XX_Count", "HTTPCode_Target_5XX_Count", "IPv6ProcessedBytes", "IPv6RequestCount", "NewConnectionCount", "ProcessedBytes", "RejectedConnectionCount", "RequestCount", "RequestCountPerTarget", "TargetConnectionErrorCount", "TargetResponseTime", "TargetTLSNegotiationErrorCount", "UnHealthyHostCount"},
 		"AWS/AutoScaling":    {"GroupMinSize", "GroupMaxSize", "GroupDesiredCapacity", "GroupInServiceInstances", "GroupPendingInstances", "GroupStandbyInstances", "GroupTerminatingInstances", "GroupTotalInstances"},
@@ -87,6 +89,7 @@ func init() {
 		"AWS/Logs":             {"IncomingBytes", "IncomingLogEvents", "ForwardedBytes", "ForwardedLogEvents", "DeliveryErrors", "DeliveryThrottling"},
 		"AWS/ML":               {"PredictCount", "PredictFailureCount"},
 		"AWS/NATGateway":       {"PacketsOutToDestination", "PacketsOutToSource", "PacketsInFromSource", "PacketsInFromDestination", "BytesOutToDestination", "BytesOutToSource", "BytesInFromSource", "BytesInFromDestination", "ErrorPortAllocation", "ActiveConnectionCount", "ConnectionAttemptCount", "ConnectionEstablishedCount", "IdleTimeoutCount", "PacketsDropCount"},
+		"AWS/NetworkELB":       {"ActiveFlowCount", "ConsumedLCUs", "HealthyHostCount", "NewFlowCount", "ProcessedBytes", "TCP_Client_Reset_Count", "TCP_ELB_Reset_Count", "TCP_Target_Reset_Count", "UnHealthyHostCount"},
 		"AWS/OpsWorks":         {"cpu_idle", "cpu_nice", "cpu_system", "cpu_user", "cpu_waitio", "load_1", "load_5", "load_15", "memory_buffers", "memory_cached", "memory_free", "memory_swap", "memory_total", "memory_used", "procs"},
 		"AWS/Redshift":         {"CPUUtilization", "DatabaseConnections", "HealthStatus", "MaintenanceMode", "NetworkReceiveThroughput", "NetworkTransmitThroughput", "PercentageDiskSpaceUsed", "ReadIOPS", "ReadLatency", "ReadThroughput", "WriteIOPS", "WriteLatency", "WriteThroughput"},
 		"AWS/RDS":              {"ActiveTransactions", "AuroraBinlogReplicaLag", "AuroraReplicaLag", "AuroraReplicaLagMaximum", "AuroraReplicaLagMinimum", "BinLogDiskUsage", "BlockedTransactions", "BufferCacheHitRatio", "CommitLatency", "CommitThroughput", "BinLogDiskUsage", "CPUCreditBalance", "CPUCreditUsage", "CPUUtilization", "DatabaseConnections", "DDLLatency", "DDLThroughput", "Deadlocks", "DeleteLatency", "DeleteThroughput", "DiskQueueDepth", "DMLLatency", "DMLThroughput", "EngineUptime", "FailedSqlStatements", "FreeableMemory", "FreeLocalStorage", "FreeStorageSpace", "InsertLatency", "InsertThroughput", "LoginFailures", "NetworkReceiveThroughput", "NetworkTransmitThroughput", "NetworkThroughput", "Queries", "ReadIOPS", "ReadLatency", "ReadThroughput", "ReplicaLag", "ResultSetCacheHitRatio", "SelectLatency", "SelectThroughput", "SwapUsage", "TotalConnections", "UpdateLatency", "UpdateThroughput", "VolumeBytesUsed", "VolumeReadIOPS", "VolumeWriteIOPS", "WriteIOPS", "WriteLatency", "WriteThroughput"},
@@ -105,6 +108,7 @@ func init() {
 		"KMS":            {"SecondsUntilKeyMaterialExpiration"},
 	}
 	dimensionsMap = map[string][]string{
+		"AWS/AmazonMQ":         {"Broker", "Topic", "Queue"},
 		"AWS/ApiGateway":       {"ApiName", "Method", "Resource", "Stage"},
 		"AWS/ApplicationELB":   {"LoadBalancer", "TargetGroup", "AvailabilityZone"},
 		"AWS/AutoScaling":      {"AutoScalingGroupName"},
@@ -126,12 +130,13 @@ func init() {
 		"AWS/Events":           {"RuleName"},
 		"AWS/Firehose":         {"DeliveryStreamName"},
 		"AWS/IoT":              {"Protocol"},
-		"AWS/Kinesis":          {"StreamName", "ShardID"},
+		"AWS/Kinesis":          {"StreamName", "ShardId"},
 		"AWS/KinesisAnalytics": {"Flow", "Id", "Application"},
 		"AWS/Lambda":           {"FunctionName", "Resource", "Version", "Alias"},
 		"AWS/Logs":             {"LogGroupName", "DestinationType", "FilterName"},
 		"AWS/ML":               {"MLModelId", "RequestMode"},
 		"AWS/NATGateway":       {"NatGatewayId"},
+		"AWS/NetworkELB":       {"LoadBalancer", "TargetGroup", "AvailabilityZone"},
 		"AWS/OpsWorks":         {"StackId", "LayerId", "InstanceId"},
 		"AWS/Redshift":         {"NodeID", "ClusterIdentifier"},
 		"AWS/RDS":              {"DBInstanceIdentifier", "DBClusterIdentifier", "DbClusterIdentifier", "DatabaseClass", "EngineName", "Role"},
@@ -208,6 +213,21 @@ func transformToTable(data []suggestData, result *tsdb.QueryResult) {
 	}
 	result.Tables = append(result.Tables, table)
 	result.Meta.Set("rowCount", len(data))
+}
+
+func parseMultiSelectValue(input string) []string {
+	trimmedInput := strings.TrimSpace(input)
+
+	if strings.HasPrefix(trimmedInput, "{") {
+		values := strings.Split(strings.TrimRight(strings.TrimLeft(trimmedInput, "{"), "}"), ",")
+		trimValues := make([]string, len(values))
+		for i, v := range values {
+			trimValues[i] = strings.TrimSpace(v)
+		}
+		return trimValues
+	} else {
+		return []string{trimmedInput}
+	}
 }
 
 // Whenever this list is updated, frontend list should also be updated.
@@ -348,19 +368,44 @@ func (e *CloudWatchExecutor) handleGetDimensionValues(ctx context.Context, param
 	return result, nil
 }
 
+func (e *CloudWatchExecutor) ensureClientSession(region string) error {
+	if e.ec2Svc == nil {
+		dsInfo := e.getDsInfo(region)
+		cfg, err := e.getAwsConfig(dsInfo)
+		if err != nil {
+			return fmt.Errorf("Failed to call ec2:getAwsConfig, %v", err)
+		}
+		sess, err := session.NewSession(cfg)
+		if err != nil {
+			return fmt.Errorf("Failed to call ec2:NewSession, %v", err)
+		}
+		e.ec2Svc = ec2.New(sess, cfg)
+	}
+	return nil
+}
+
 func (e *CloudWatchExecutor) handleGetEbsVolumeIds(ctx context.Context, parameters *simplejson.Json, queryContext *tsdb.TsdbQuery) ([]suggestData, error) {
 	region := parameters.Get("region").MustString()
 	instanceId := parameters.Get("instanceId").MustString()
 
-	instanceIds := []*string{aws.String(instanceId)}
+	err := e.ensureClientSession(region)
+	if err != nil {
+		return nil, err
+	}
+
+	instanceIds := aws.StringSlice(parseMultiSelectValue(instanceId))
 	instances, err := e.ec2DescribeInstances(region, nil, instanceIds)
 	if err != nil {
 		return nil, err
 	}
 
 	result := make([]suggestData, 0)
-	for _, mapping := range instances.Reservations[0].Instances[0].BlockDeviceMappings {
-		result = append(result, suggestData{Text: *mapping.Ebs.VolumeId, Value: *mapping.Ebs.VolumeId})
+	for _, reservation := range instances.Reservations {
+		for _, instance := range reservation.Instances {
+			for _, mapping := range instance.BlockDeviceMappings {
+				result = append(result, suggestData{Text: *mapping.Ebs.VolumeId, Value: *mapping.Ebs.VolumeId})
+			}
+		}
 	}
 
 	return result, nil
@@ -373,16 +418,23 @@ func (e *CloudWatchExecutor) handleGetEc2InstanceAttribute(ctx context.Context, 
 
 	var filters []*ec2.Filter
 	for k, v := range filterJson {
-		if vv, ok := v.([]string); ok {
-			var vvvv []*string
+		if vv, ok := v.([]interface{}); ok {
+			var vvvvv []*string
 			for _, vvv := range vv {
-				vvvv = append(vvvv, &vvv)
+				if vvvv, ok := vvv.(string); ok {
+					vvvvv = append(vvvvv, &vvvv)
+				}
 			}
 			filters = append(filters, &ec2.Filter{
 				Name:   aws.String(k),
-				Values: vvvv,
+				Values: vvvvv,
 			})
 		}
+	}
+
+	err := e.ensureClientSession(region)
+	if err != nil {
+		return nil, err
 	}
 
 	instances, err := e.ec2DescribeInstances(region, filters, nil)
@@ -460,31 +512,20 @@ func (e *CloudWatchExecutor) cloudwatchListMetrics(region string, namespace stri
 			return !lastPage
 		})
 	if err != nil {
-		return nil, errors.New("Failed to call cloudwatch:ListMetrics")
+		return nil, fmt.Errorf("Failed to call cloudwatch:ListMetrics, %v", err)
 	}
 
 	return &resp, nil
 }
 
 func (e *CloudWatchExecutor) ec2DescribeInstances(region string, filters []*ec2.Filter, instanceIds []*string) (*ec2.DescribeInstancesOutput, error) {
-	dsInfo := e.getDsInfo(region)
-	cfg, err := e.getAwsConfig(dsInfo)
-	if err != nil {
-		return nil, errors.New("Failed to call ec2:DescribeInstances")
-	}
-	sess, err := session.NewSession(cfg)
-	if err != nil {
-		return nil, errors.New("Failed to call ec2:DescribeInstances")
-	}
-	svc := ec2.New(sess, cfg)
-
 	params := &ec2.DescribeInstancesInput{
 		Filters:     filters,
 		InstanceIds: instanceIds,
 	}
 
 	var resp ec2.DescribeInstancesOutput
-	err = svc.DescribeInstancesPages(params,
+	err := e.ec2Svc.DescribeInstancesPages(params,
 		func(page *ec2.DescribeInstancesOutput, lastPage bool) bool {
 			reservations, _ := awsutil.ValuesAtPath(page, "Reservations")
 			for _, reservation := range reservations {
